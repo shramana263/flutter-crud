@@ -32,6 +32,7 @@ class TaskRepository {
     }
   }
 
+ // ...existing code...
   Future<Task> createTask(Task task) async {
     final connectivityResult = await connectivity.checkConnectivity();
     if (connectivityResult != ConnectivityResult.none) {
@@ -41,13 +42,20 @@ class TaskRepository {
         return remoteTask;
       } on ServerException {
         final id = await localDataSource.insertTask(task);
+        if (id == null || id < 0 || id > 0xFFFFFFFF) {
+          throw Exception('Invalid id returned from localDataSource: $id');
+        }
         return task.copyWith(id: id);
       }
     } else {
       final id = await localDataSource.insertTask(task);
+      if (id == null || id < 0 || id > 0xFFFFFFFF) {
+        throw Exception('Invalid id returned from localDataSource: $id');
+      }
       return task.copyWith(id: id);
     }
   }
+// ...existing code...
 
   Future<Task> updateTask(Task task) async {
     final connectivityResult = await connectivity.checkConnectivity();
