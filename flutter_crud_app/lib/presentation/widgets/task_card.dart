@@ -1,4 +1,3 @@
-// lib/presentation/widgets/task_card.dart
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/task.dart';
@@ -20,7 +19,8 @@ class TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      elevation: 2,
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -28,6 +28,7 @@ class TaskCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Text(
@@ -36,40 +37,63 @@ class TaskCard extends StatelessWidget {
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                       decoration: task.isCompleted ? TextDecoration.lineThrough : null,
+                      color: task.isCompleted ? Colors.grey : Colors.black87,
                     ),
                   ),
                 ),
                 Checkbox(
                   value: task.isCompleted,
+                  activeColor: Theme.of(context).primaryColor,
                   onChanged: onStatusChanged,
                 ),
               ],
             ),
             const SizedBox(height: 8),
-            Text(task.description),
-            const SizedBox(height: 8),
+            Text(
+              task.description,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
             Row(
               children: [
-                Text(
-                  'Priority: ${task.priority}',
-                  style: TextStyle(
-                    color: task.priority > 2 ? Colors.red : Colors.grey,
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: task.priority > 3 ? Colors.red[100] : Colors.grey[200],
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    'Priority: ${task.priority}',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: task.priority > 3 ? Colors.red[900] : Colors.grey[800],
+                    ),
                   ),
                 ),
                 const Spacer(),
                 Text(
                   'Created: ${DateFormat('MMM d, y').format(task.createdDate)}',
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[500],
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 IconButton(
                   icon: const Icon(Icons.edit, color: Colors.blue),
                   onPressed: onEdit,
+                  tooltip: 'Edit Task',
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -79,6 +103,9 @@ class TaskCard extends StatelessWidget {
                       builder: (ctx) => AlertDialog(
                         title: const Text('Confirm Delete'),
                         content: const Text('Are you sure you want to delete this task?'),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.of(ctx).pop(),
@@ -96,6 +123,7 @@ class TaskCard extends StatelessWidget {
                       ),
                     );
                   },
+                  tooltip: 'Delete Task',
                 ),
               ],
             ),

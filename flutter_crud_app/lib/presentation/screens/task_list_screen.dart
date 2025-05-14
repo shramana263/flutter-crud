@@ -1,4 +1,3 @@
-// lib/presentation/screens/task_list_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/task/task_bloc.dart';
@@ -19,7 +18,6 @@ class _TaskListScreenState extends State<TaskListScreen> {
   @override
   void initState() {
     super.initState();
-    // Load tasks when screen initializes
     context.read<TaskBloc>().add(GetTasks());
   }
 
@@ -28,6 +26,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Task Manager'),
+        elevation: 0,
+        backgroundColor: Theme.of(context).primaryColor,
       ),
       body: BlocConsumer<TaskBloc, TaskState>(
         listener: (context, state) {
@@ -36,6 +36,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
               ),
             );
           } else if (state is TaskError) {
@@ -43,91 +44,130 @@ class _TaskListScreenState extends State<TaskListScreen> {
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.red,
+                duration: const Duration(seconds: 3),
               ),
             );
           }
         },
         builder: (context, state) {
-          if (state is TaskLoading) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (state is TasksLoaded) {
-            return state.tasks.isEmpty
-                ? const Center(
-                    child: Text(
-                      'No tasks yet. Add a new task by tapping the + button.',
-                      textAlign: TextAlign.center,
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: () async {
-                      context.read<TaskBloc>().add(GetTasks());
-                    },
-                    child: ListView.builder(
-                      itemCount: state.tasks.length,
-                      itemBuilder: (context, index) {
-                        final task = state.tasks[index];
-                        return Dismissible(
-                          key: Key(task.id.toString()),
-                          background: Container(
-                            color: Colors.red,
-                            alignment: Alignment.centerRight,
-                            padding: const EdgeInsets.only(right: 20),
-                            child: const Icon(
-                              Icons.delete,
-                              color: Colors.white,
-                            ),
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              if (state is TaskLoading) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (state is TasksLoaded) {
+                if (state.tasks.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.task_alt,
+                          size: 60,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No tasks yet. Add a new task by tapping the + button.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
                           ),
-                          direction: DismissDirection.endToStart,
-                          confirmDismiss: (direction) async {
-                            return await showDialog(
-                              context: context,
-                              builder: (ctx) => AlertDialog(
-                                title: const Text('Confirm Delete'),
-                                content: const Text('Are you sure you want to delete this task?'),
-                                actions: [
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop(false),
-                                    child: const Text('Cancel'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => Navigator.of(ctx).pop(true),
-                                    style: TextButton.styleFrom(foregroundColor: Colors.red),
-                                    child: const Text('Delete'),
-                                  ),
-                                ],
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return RefreshIndicator(
+                  onRefresh: () async {
+                    context.read<TaskBloc>().add(GetTasks());
+                  },
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: state.tasks.length,
+                    separatorBuilder: (context, index) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final task = state.tasks[index];
+                      return Dismissible(
+                        key: Key(task.id.toString()),
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.only(right: 20),
+                          child: const Icon(
+                            Icons.delete,
+                            color: Colors.white,
+                          ),
+                        ),
+                        direction: DismissDirection.endToStart,
+                        confirmDismiss: (direction) async {
+                          return await showDialog(
+                            context: context,
+                            builder: (ctx) => AlertDialog(
+                              title: const Text('Confirm Delete'),
+                              content: const Text('Are you sure you want to delete this task?'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(false),
+                                  child: const Text('Cancel'),
+                                ),
+                                TextButton(
+                                  onPressed: () => Navigator.of(ctx).pop(true),
+                                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                  child: const Text('Delete'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        onDismissed: (direction) {
+                          context.read<TaskBloc>().add(DeleteTask(task.id!));
+                        },
+                        child: TaskCard(
+                          task: task,
+                          onEdit: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => TaskFormScreen(task: task),
                               ),
                             );
                           },
-                          onDismissed: (direction) {
+                          onDelete: () {
                             context.read<TaskBloc>().add(DeleteTask(task.id!));
                           },
-                          child: TaskCard(
-                            task: task,
-                            onEdit: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => TaskFormScreen(task: task),
-                                ),
-                              );
-                            },
-                            onDelete: () {
-                              context.read<TaskBloc>().add(DeleteTask(task.id!));
-                            },
-                            onStatusChanged: (value) {
-                              final updatedTask = task.copyWith(isCompleted: value);
-                              context.read<TaskBloc>().add(UpdateTask(updatedTask));
-                            },
-                          ),
-                        );
-                      },
+                          onStatusChanged: (value) {
+                            final updatedTask = task.copyWith(isCompleted: value);
+                            context.read<TaskBloc>().add(UpdateTask(updatedTask));
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                );
+              }
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.error_outline,
+                      size: 60,
+                      color: Colors.grey[400],
                     ),
-                  );
-          } else {
-            return const Center(
-              child: Text('Failed to load tasks. Pull down to refresh.'),
-            );
-          }
+                    const SizedBox(height: 16),
+                    Text(
+                      'Failed to load tasks. Pull down to refresh.',
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
         },
       ),
       floatingActionButton: FloatingActionButton(
@@ -139,6 +179,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
             ),
           );
         },
+        backgroundColor: Theme.of(context).primaryColor,
         child: const Icon(Icons.add),
       ),
     );
