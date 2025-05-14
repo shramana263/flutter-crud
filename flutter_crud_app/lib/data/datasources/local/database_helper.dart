@@ -1,9 +1,11 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:logger/logger.dart';
 import '../../../models/task.dart';
 
 class DatabaseHelper {
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Box<Task>? _box;
+  final Logger _logger = Logger();
 
   factory DatabaseHelper() => _instance;
 
@@ -12,20 +14,18 @@ class DatabaseHelper {
   Future<Box<Task>> get box async {
     if (_box != null) return _box!;
     _box = await Hive.openBox<Task>('tasks');
+    _logger.i('Hive box "tasks" opened');
     return _box!;
   }
 
-    Future<int> insertTask(Task task) async {
+  Future<int> insertTask(Task task) async {
     var box = await this.box;
     if (task.id != null) {
-      // Use task.id as key to avoid duplicates
       await box.put(task.id!, task);
+      _logger.i('Inserted task with ID: ${task.id}, Title: ${task.title}');
       return task.id!;
     } else {
-      // Generate a new ID for the task within Hive's allowed range
       final newId = DateTime.now().millisecondsSinceEpoch % 0xFFFFFFFF;
-      
-      // Create a new task with the generated ID
       final taskWithId = Task(
         id: newId,
         title: task.title,
@@ -34,25 +34,26 @@ class DatabaseHelper {
         createdDate: task.createdDate,
         priority: task.priority,
       );
-      
-      // Store the task using the new ID as the key
       await box.put(newId, taskWithId);
+      _logger.i('Inserted new task with ID: $newId, Title: ${task.title}');
       return newId;
     }
   }
 
   Future<List<Task>> getTasks() async {
     var box = await this.box;
-    return box.values.toList();
+    final tasks = box.values.toList();
+    _logger.i('Retrieved ${tasks.length} tasks from Hive');
+    return tasks;
   }
 
   Future<void> updateTask(Task task) async {
     var box = await this.box;
     if (task.id != null) {
-      // Make sure we're using the ID as the key
       await box.put(task.id!, task);
-      print('Updated task with ID: ${task.id}');
+      _logger.i('Updated task with ID: ${task.id}, Title: ${task.title}');
     } else {
+      _logger.e('Cannot update a task without an ID');
       throw Exception('Cannot update a task without an ID');
     }
   }
@@ -60,19 +61,18 @@ class DatabaseHelper {
   Future<void> deleteTask(int id) async {
     var box = await this.box;
     await box.delete(id);
-    print('Deleted task with ID: $id');
+    _logger.i('Deleted task with ID: $id');
   }
-  
-  // For debugging purposes
+
   Future<void> printAllTasks() async {
     var box = await this.box;
     final tasks = box.values.toList();
     final keys = box.keys.toList();
-    
-    print('===== TASKS IN DATABASE =====');
+
+    _logger.i('===== TASKS IN DATABASE =====');
     for (int i = 0; i < box.length; i++) {
-      print('Key: ${keys[i]}, ID: ${tasks[i].id}, Title: ${tasks[i].title}');
+      _logger.i('Key: ${keys[i]}, ID: ${tasks[i].id}, Title: ${tasks[i].title}');
     }
-    print('============================');
+    _logger.i('============================');
   }
 }
