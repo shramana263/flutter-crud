@@ -11,7 +11,7 @@ This is a Flutter application that implements a full-stack CRUD (Create, Read, U
 
 2. **Clone the Repository**:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/shramana263/flutter-crud.git
    cd flutter_crud_app
    ```
 
@@ -25,6 +25,12 @@ This is a Flutter application that implements a full-stack CRUD (Create, Read, U
    Ensure you have an emulator or physical device connected, then run:
    ```bash
    flutter run
+   ```
+
+4. **Run the App in web**:
+   If you want to run it on web server, then run:
+   ```bash
+   flutter run -d web-server
    ```
 
 ## API Endpoints Documentation
