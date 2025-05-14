@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart' as material; // Alias for Material to avoid conflict
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../data/datasources/local/database_helper.dart'; // Import DatabaseHelper for debugging
 import '../bloc/task/task_bloc.dart';
 import '../bloc/task/task_event.dart';
 import '../bloc/task/task_state.dart';
@@ -189,6 +190,8 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
               _allTasks = state.tasks;
               _applyFiltersAndSort();
             });
+            // Debug: Print all tasks in Hive to confirm persistence
+            RepositoryProvider.of<DatabaseHelper>(context).printAllTasks();
           }
         },
         builder: (context, state) {

@@ -66,6 +66,12 @@ class DatabaseHelper {
     _logger.i('Deleted task with ID: $id');
   }
 
+  Future<void> clearTasks() async {
+    var box = await this.box;
+    await box.clear();
+    _logger.i('Cleared all tasks from Hive');
+  }
+
   Future<void> printAllTasks() async {
     var box = await this.box;
     final tasks = box.values.toList();
