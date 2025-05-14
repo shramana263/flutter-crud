@@ -1,12 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:flutter/material.dart' as material;
+import 'package:intl/intl.dart'; // For formatting DateTime
 import '../../models/task.dart';
 
-class TaskCard extends StatelessWidget {
+class TaskCard extends material.StatelessWidget {
   final Task task;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
-  final ValueChanged<bool?> onStatusChanged;
+  final material.VoidCallback onEdit;
+  final material.VoidCallback onDelete;
+  final Function(bool) onStatusChanged;
 
   const TaskCard({
     super.key,
@@ -17,113 +17,105 @@ class TaskCard extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
-    return Card(
-      elevation: 3,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  material.Widget build(material.BuildContext context) {
+    return material.Card(
+      elevation: 2,
+      shape: material.RoundedRectangleBorder(
+        borderRadius: material.BorderRadius.circular(12),
+      ),
+      child: material.Padding(
+        padding: const material.EdgeInsets.all(16),
+        child: material.Column(
+          crossAxisAlignment: material.CrossAxisAlignment.start,
           children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            material.Row(
               children: [
-                Expanded(
-                  child: Text(
+                material.Expanded(
+                  child: material.Text(
                     task.title,
-                    style: TextStyle(
+                    style: material.TextStyle(
                       fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      decoration: task.isCompleted ? TextDecoration.lineThrough : null,
-                      color: task.isCompleted ? Colors.grey : Colors.black87,
+                      fontWeight: material.FontWeight.bold,
+                      color: material.Theme.of(context).textTheme.bodyLarge!.color,
+                      decoration: task.isCompleted
+                          ? material.TextDecoration.lineThrough
+                          : material.TextDecoration.none,
                     ),
                   ),
                 ),
-                Checkbox(
+                material.Checkbox(
                   value: task.isCompleted,
-                  activeColor: Theme.of(context).primaryColor,
-                  onChanged: onStatusChanged,
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              task.description,
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[600],
-              ),
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: task.priority > 3 ? Colors.red[100] : Colors.grey[200],
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    'Priority: ${task.priority}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: task.priority > 3 ? Colors.red[900] : Colors.grey[800],
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  'Created: ${DateFormat('MMM d, y').format(task.createdDate)}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey[500],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: onEdit,
-                  tooltip: 'Edit Task',
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (ctx) => AlertDialog(
-                        title: const Text('Confirm Delete'),
-                        content: const Text('Are you sure you want to delete this task?'),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(ctx).pop(),
-                            child: const Text('Cancel'),
-                          ),
-                          TextButton(
-                            onPressed: () {
-                              Navigator.of(ctx).pop();
-                              onDelete();
-                            },
-                            style: TextButton.styleFrom(foregroundColor: Colors.red),
-                            child: const Text('Delete'),
-                          ),
-                        ],
-                      ),
-                    );
+                  onChanged: (value) {
+                    if (value != null) {
+                      onStatusChanged(value);
+                    }
                   },
-                  tooltip: 'Delete Task',
+                  activeColor: material.Theme.of(context).primaryColor,
+                ),
+              ],
+            ),
+            const material.SizedBox(height: 8),
+            material.Text(
+              task.description,
+              style: material.TextStyle(
+                fontSize: 14,
+                color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.7),
+              ),
+            ),
+            const material.SizedBox(height: 8),
+            // Display the created date and time
+            material.Text(
+              'Created: ${DateFormat('MMM d, yyyy h:mm a').format(task.createdDate)}',
+              style: material.TextStyle(
+                fontSize: 12,
+                color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
+                fontStyle: material.FontStyle.italic,
+              ),
+            ),
+            const material.SizedBox(height: 8),
+            material.Row(
+              mainAxisAlignment: material.MainAxisAlignment.spaceBetween,
+              children: [
+                material.Row(
+                  children: [
+                    material.Icon(
+                      material.Icons.flag,
+                      size: 16,
+                      color: task.priority == 1
+                          ? material.Colors.green
+                          : task.priority == 2
+                              ? material.Colors.orange
+                              : material.Colors.red,
+                    ),
+                    const material.SizedBox(width: 4),
+                    material.Text(
+                      task.priority == 1
+                          ? 'Low'
+                          : task.priority == 2
+                              ? 'Medium'
+                              : 'High',
+                      style: material.TextStyle(
+                        fontSize: 12,
+                        color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+                material.Row(
+                  children: [
+                    material.IconButton(
+                      icon: const material.Icon(material.Icons.edit, size: 20),
+                      color: material.Colors.grey,
+                      onPressed: onEdit,
+                      tooltip: 'Edit Task',
+                    ),
+                    material.IconButton(
+                      icon: const material.Icon(material.Icons.delete, size: 20),
+                      color: material.Colors.red,
+                      onPressed: onDelete,
+                      tooltip: 'Delete Task',
+                    ),
+                  ],
                 ),
               ],
             ),

@@ -1,9 +1,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/repositories/task_repository.dart';
 import '../../../core/errors/exceptions.dart';
+import '../../../models/task.dart'; // Added import for Task model
 import 'task_event.dart';
 import 'task_state.dart';
-import 'package:flutter_crud_app/models/task.dart';
 
 class TaskBloc extends Bloc<TaskEvent, TaskState> {
   final TaskRepository repository;
@@ -20,6 +20,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     emit(TaskLoading());
     try {
       final tasks = await repository.getTasks();
+      // Sort tasks by createdDate in descending order
+      tasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
       _currentTasks = tasks;
       emit(TasksLoaded(tasks));
     } on ServerException {
@@ -34,6 +36,8 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
   Future<void> _onAddTask(AddTask event, Emitter<TaskState> emit) async {
     // Optimistic update
     final updatedTasks = List<Task>.from(_currentTasks)..add(event.task);
+    // Sort to ensure the new task appears at the top
+    updatedTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     _currentTasks = updatedTasks;
     emit(TasksLoaded(updatedTasks));
 
@@ -42,11 +46,14 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       _currentTasks = _currentTasks.map((task) {
         return task == event.task ? createdTask : task;
       }).toList();
+      // Sort again after adding
+      _currentTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
       emit(const TaskOperationSuccess('Task added successfully!'));
       emit(TasksLoaded(_currentTasks));
     } catch (e) {
       // Revert optimistic update on failure
       _currentTasks = _currentTasks.where((task) => task != event.task).toList();
+      _currentTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
       emit(TasksLoaded(_currentTasks));
       if (e is ServerException) {
         emit(const TaskError('Failed to add task to the server.'));
@@ -63,6 +70,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     final updatedTasks = _currentTasks.map((task) {
       return task.id == event.task.id ? event.task : task;
     }).toList();
+    updatedTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     _currentTasks = updatedTasks;
     emit(TasksLoaded(updatedTasks));
 
@@ -71,6 +79,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       _currentTasks = _currentTasks.map((task) {
         return task.id == updatedTask.id ? updatedTask : task;
       }).toList();
+      _currentTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
       emit(const TaskOperationSuccess('Task updated successfully!'));
       emit(TasksLoaded(_currentTasks));
     } catch (e) {
@@ -79,6 +88,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
       _currentTasks = _currentTasks.map((task) {
         return task.id == event.task.id ? originalTask : task;
       }).toList();
+      _currentTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
       emit(TasksLoaded(_currentTasks));
       if (e is ServerException) {
         emit(const TaskError('Failed to update task on the server.'));
@@ -94,6 +104,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     // Optimistic update
     final deletedTask = _currentTasks.firstWhere((task) => task.id == event.id);
     final updatedTasks = _currentTasks.where((task) => task.id != event.id).toList();
+    updatedTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     _currentTasks = updatedTasks;
     emit(TasksLoaded(updatedTasks));
 
@@ -104,6 +115,7 @@ class TaskBloc extends Bloc<TaskEvent, TaskState> {
     } catch (e) {
       // Revert optimistic update on failure
       _currentTasks = List<Task>.from(_currentTasks)..add(deletedTask);
+      _currentTasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
       emit(TasksLoaded(_currentTasks));
       if (e is ServerException) {
         emit(const TaskError('Failed to delete task from the server.'));

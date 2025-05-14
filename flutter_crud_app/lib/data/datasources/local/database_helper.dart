@@ -43,6 +43,8 @@ class DatabaseHelper {
   Future<List<Task>> getTasks() async {
     var box = await this.box;
     final tasks = box.values.toList();
+    // Sort tasks by createdDate in descending order
+    tasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     _logger.i('Retrieved ${tasks.length} tasks from Hive');
     return tasks;
   }

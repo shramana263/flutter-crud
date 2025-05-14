@@ -1,8 +1,8 @@
-import '../../models/task.dart';
-import '../datasources/local/database_helper.dart';
-import '../api/task_api_service.dart';
-import '../../core/errors/exceptions.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import '../api/task_api_service.dart';
+import '../datasources/local/database_helper.dart';
+import '../../models/task.dart';
+import '../../core/errors/exceptions.dart';
 
 class TaskRepository {
   final TaskApiService apiService;
@@ -15,74 +15,86 @@ class TaskRepository {
     required this.connectivity,
   });
 
+  Future<bool> _isOnline() async {
+    var connectivityResult = await connectivity.checkConnectivity();
+    return connectivityResult != ConnectivityResult.none;
+  }
+
   Future<List<Task>> getTasks() async {
-    final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult != ConnectivityResult.none) {
-      try {
-        final remoteTasks = await apiService.getTasks();
-        for (var task in remoteTasks) {
-          await localDataSource.insertTask(task);
-        }
-        return remoteTasks;
-      } on ServerException {
-        return await localDataSource.getTasks();
+    try {
+      if (await _isOnline()) {
+        final tasks = await apiService.getTasks();
+        return tasks;
+      } else {
+        final tasks = await localDataSource.getTasks();
+        return tasks;
       }
-    } else {
-      return await localDataSource.getTasks();
+    } catch (e) {
+      if (e is ServerException) {
+        throw ServerException();
+      } else if (e is CacheException) {
+        throw CacheException();
+      } else {
+        throw Exception('Unexpected error: ${e.toString()}');
+      }
     }
   }
 
- // ...existing code...
   Future<Task> createTask(Task task) async {
-    final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult != ConnectivityResult.none) {
-      try {
-        final remoteTask = await apiService.createTask(task);
-        await localDataSource.insertTask(remoteTask);
-        return remoteTask;
-      } on ServerException {
-        final id = await localDataSource.insertTask(task);
-        if (id == null || id < 0 || id > 0xFFFFFFFF) {
-          throw Exception('Invalid id returned from localDataSource: $id');
-        }
-        return task.copyWith(id: id);
+    try {
+      if (await _isOnline()) {
+        final createdTask = await apiService.createTask(task);
+        return createdTask;
+      } else {
+        final localId = await localDataSource.insertTask(task);
+        return task.copyWith(id: localId);
       }
-    } else {
-      final id = await localDataSource.insertTask(task);
-      if (id == null || id < 0 || id > 0xFFFFFFFF) {
-        throw Exception('Invalid id returned from localDataSource: $id');
+    } catch (e) {
+      if (e is ServerException) {
+        throw ServerException();
+      } else if (e is CacheException) {
+        throw CacheException();
+      } else {
+        throw Exception('Unexpected error: ${e.toString()}');
       }
-      return task.copyWith(id: id);
     }
   }
-// ...existing code...
 
   Future<Task> updateTask(Task task) async {
-    final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult != ConnectivityResult.none) {
-      try {
-        final remoteTask = await apiService.updateTask(task);
-        await localDataSource.updateTask(remoteTask);
-        return remoteTask;
-      } on ServerException {
+    try {
+      if (await _isOnline()) {
+        final updatedTask = await apiService.updateTask(task);
+        return updatedTask;
+      } else {
         await localDataSource.updateTask(task);
         return task;
       }
-    } else {
-      await localDataSource.updateTask(task);
-      return task;
+    } catch (e) {
+      if (e is ServerException) {
+        throw ServerException();
+      } else if (e is CacheException) {
+        throw CacheException();
+      } else {
+        throw Exception('Unexpected error: ${e.toString()}');
+      }
     }
   }
 
   Future<void> deleteTask(int id) async {
-    final connectivityResult = await connectivity.checkConnectivity();
-    if (connectivityResult != ConnectivityResult.none) {
-      try {
+    try {
+      if (await _isOnline()) {
         await apiService.deleteTask(id);
-      } catch (_) {
-        // ignore API failure, proceed to local delete
+      } else {
+        await localDataSource.deleteTask(id);
+      }
+    } catch (e) {
+      if (e is ServerException) {
+        throw ServerException();
+      } else if (e is CacheException) {
+        throw CacheException();
+      } else {
+        throw Exception('Unexpected error: ${e.toString()}');
       }
     }
-    await localDataSource.deleteTask(id);
   }
 }

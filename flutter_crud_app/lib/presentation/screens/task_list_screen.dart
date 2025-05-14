@@ -1,30 +1,31 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' as material; // Alias for Material to avoid conflict
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/task/task_bloc.dart';
 import '../bloc/task/task_event.dart';
 import '../bloc/task/task_state.dart';
 import '../widgets/task_card.dart';
-import '../widgets/search_bar.dart' as custom_widgets;
+import '../widgets/search_bar.dart'; // Custom SearchBar
 import 'task_form_modal.dart';
 import '../../models/task.dart';
 import '../../main.dart';
 
-class TaskListScreen extends StatefulWidget {
+class TaskListScreen extends material.StatefulWidget {
   const TaskListScreen({super.key});
 
   @override
-  State<TaskListScreen> createState() => _TaskListScreenState();
+  material.State<TaskListScreen> createState() => _TaskListScreenState();
 }
 
-class _TaskListScreenState extends State<TaskListScreen> {
-  final ScrollController _scrollController = ScrollController();
+class _TaskListScreenState extends material.State<TaskListScreen> {
+  final material.ScrollController _scrollController = material.ScrollController();
   List<Task> _filteredTasks = [];
   String _searchQuery = '';
-  String _sortBy = 'createdDate';
-  bool _sortAscending = false;
+  String? _sortBy = 'createdDate'; // Default sort by created date
+  bool _sortAscending = false; // Default to descending (latest to oldest)
   int _currentPage = 1;
   final int _pageSize = 10;
   bool _isLoadingMore = false;
+  List<Task> _allTasks = []; // Store all tasks to avoid re-fetching
 
   @override
   void initState() {
@@ -39,7 +40,8 @@ class _TaskListScreenState extends State<TaskListScreen> {
         _isLoadingMore = true;
         _currentPage++;
       });
-      context.read<TaskBloc>().add(GetTasks());
+      // No need to call GetTasks again; we already have all tasks in _allTasks
+      _applyFiltersAndSort();
     }
   }
 
@@ -59,32 +61,36 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   void _applyFiltersAndSort() {
-    final state = context.read<TaskBloc>().state;
-    if (state is TasksLoaded) {
-      _filteredTasks = state.tasks.where((task) {
-        return task.title.toLowerCase().contains(_searchQuery) ||
-            task.description.toLowerCase().contains(_searchQuery);
-      }).toList();
+    _filteredTasks = _allTasks.where((task) {
+      return task.title.toLowerCase().contains(_searchQuery) ||
+          task.description.toLowerCase().contains(_searchQuery);
+    }).toList();
 
-      _filteredTasks.sort((a, b) {
-        int compare;
-        if (_sortBy == 'createdDate') {
-          compare = a.createdDate.compareTo(b.createdDate);
-        } else if (_sortBy == 'priority') {
-          compare = a.priority.compareTo(b.priority);
-        } else {
-          compare = a.title.compareTo(b.title);
-        }
-        return _sortAscending ? compare : -compare;
-      });
-    }
+    _filteredTasks.sort((a, b) {
+      int compare;
+      if (_sortBy == 'createdDate') {
+        compare = a.createdDate.compareTo(b.createdDate);
+      } else if (_sortBy == 'priority') {
+        compare = a.priority.compareTo(b.priority);
+      } else {
+        compare = a.title.compareTo(b.title);
+      }
+      return _sortAscending ? compare : -compare; // Ensures latest-to-oldest by default
+    });
+
+    setState(() {
+      _isLoadingMore = false;
+    });
   }
 
   void _toggleTheme() {
-    themeModeNotifier.value = themeModeNotifier.value == ThemeMode.light ? ThemeMode.dark : ThemeMode.light;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Theme switched to ${themeModeNotifier.value == ThemeMode.dark ? "Dark" : "Light"} mode'),
+    themeModeNotifier.value = themeModeNotifier.value == material.ThemeMode.light
+        ? material.ThemeMode.dark
+        : material.ThemeMode.light;
+    material.ScaffoldMessenger.of(context).showSnackBar(
+      material.SnackBar(
+        content: material.Text(
+            'Theme switched to ${themeModeNotifier.value == material.ThemeMode.dark ? "Dark" : "Light"} mode'),
         duration: const Duration(seconds: 1),
       ),
     );
@@ -97,23 +103,23 @@ class _TaskListScreenState extends State<TaskListScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Task Manager'),
+  material.Widget build(material.BuildContext context) {
+    return material.Scaffold(
+      appBar: material.AppBar(
+        title: const material.Text('Task Manager'),
         elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: material.Theme.of(context).primaryColor,
         actions: [
-          IconButton(
-            icon: Icon(
-              Theme.of(context).brightness == Brightness.light
-                  ? Icons.dark_mode
-                  : Icons.light_mode,
+          material.IconButton(
+            icon: material.Icon(
+              material.Theme.of(context).brightness == material.Brightness.light
+                  ? material.Icons.dark_mode
+                  : material.Icons.light_mode,
             ),
             onPressed: _toggleTheme,
             tooltip: 'Toggle Theme',
           ),
-          PopupMenuButton<String>(
+          material.PopupMenuButton<String>(
             onSelected: (value) {
               if (value == 'createdDateAsc') {
                 _onSort('createdDate', true);
@@ -130,72 +136,73 @@ class _TaskListScreenState extends State<TaskListScreen> {
               }
             },
             itemBuilder: (context) => [
-              const PopupMenuItem(
+              const material.PopupMenuItem(
                 value: 'createdDateAsc',
-                child: Text('Sort by Date (Asc)'),
+                child: material.Text('Sort by Date (Oldest to Latest)'),
               ),
-              const PopupMenuItem(
+              const material.PopupMenuItem(
                 value: 'createdDateDesc',
-                child: Text('Sort by Date (Desc)'),
+                child: material.Text('Sort by Date (Latest to Oldest)'),
               ),
-              const PopupMenuItem(
+              const material.PopupMenuItem(
                 value: 'priorityAsc',
-                child: Text('Sort by Priority (Asc)'),
+                child: material.Text('Sort by Priority (Low to High)'),
               ),
-              const PopupMenuItem(
+              const material.PopupMenuItem(
                 value: 'priorityDesc',
-                child: Text('Sort by Priority (Desc)'),
+                child: material.Text('Sort by Priority (High to Low)'),
               ),
-              const PopupMenuItem(
+              const material.PopupMenuItem(
                 value: 'titleAsc',
-                child: Text('Sort by Title (Asc)'),
+                child: material.Text('Sort by Title (A to Z)'),
               ),
-              const PopupMenuItem(
+              const material.PopupMenuItem(
                 value: 'titleDesc',
-                child: Text('Sort by Title (Desc)'),
+                child: material.Text('Sort by Title (Z to A)'),
               ),
             ],
-            icon: const Icon(Icons.sort),
+            icon: const material.Icon(material.Icons.sort),
           ),
         ],
       ),
       body: BlocConsumer<TaskBloc, TaskState>(
         listener: (context, state) {
           if (state is TaskOperationSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.green,
+            material.ScaffoldMessenger.of(context).showSnackBar(
+              material.SnackBar(
+                content: material.Text(state.message),
+                backgroundColor: material.Colors.green,
                 duration: const Duration(seconds: 2),
               ),
             );
           } else if (state is TaskError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-                backgroundColor: Colors.red,
+            material.ScaffoldMessenger.of(context).showSnackBar(
+              material.SnackBar(
+                content: material.Text(state.message),
+                backgroundColor: material.Colors.red,
                 duration: const Duration(seconds: 3),
               ),
             );
           }
           if (state is TasksLoaded) {
             setState(() {
-              _isLoadingMore = false;
+              _allTasks = state.tasks;
+              _applyFiltersAndSort();
             });
-            _applyFiltersAndSort();
           }
         },
         builder: (context, state) {
-          return LayoutBuilder(
+          return material.LayoutBuilder(
             builder: (context, constraints) {
-              return Column(
+              return material.Column(
                 children: [
-                  custom_widgets.SearchBar(onSearch: _onSearch),
-                  Expanded(
-                    child: RefreshIndicator(
+                  SearchBar(onSearch: _onSearch), // Refers to the custom SearchBar
+                  material.Expanded(
+                    child: material.RefreshIndicator(
                       onRefresh: () async {
                         setState(() {
                           _currentPage = 1;
+                          _allTasks.clear();
                         });
                         context.read<TaskBloc>().add(GetTasks());
                       },
@@ -208,40 +215,40 @@ class _TaskListScreenState extends State<TaskListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: material.FloatingActionButton(
         onPressed: () {
-          showDialog(
+          material.showDialog(
             context: context,
             builder: (context) => const TaskFormModal(),
           );
         },
-        backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add),
+        backgroundColor: material.Theme.of(context).primaryColor,
+        child: const material.Icon(material.Icons.add),
       ),
     );
   }
 
-  Widget _buildTaskList(TaskState state, BoxConstraints constraints) {
-    if (state is TaskLoading && _currentPage == 1) {
-      return const Center(child: CircularProgressIndicator());
-    } else if (state is TasksLoaded) {
+  material.Widget _buildTaskList(TaskState state, material.BoxConstraints constraints) {
+    if (state is TaskLoading && _currentPage == 1 && _allTasks.isEmpty) {
+      return const material.Center(child: material.CircularProgressIndicator());
+    } else if (state is TasksLoaded || _allTasks.isNotEmpty) {
       if (_filteredTasks.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
+        return material.Center(
+          child: material.Column(
+            mainAxisAlignment: material.MainAxisAlignment.center,
             children: [
-              Icon(
-                Icons.task_alt,
+              material.Icon(
+                material.Icons.task_alt,
                 size: 60,
-                color: Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
+                color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
               ),
-              const SizedBox(height: 16),
-              Text(
+              const material.SizedBox(height: 16),
+              material.Text(
                 'No tasks yet. Add a new task by tapping the + button.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
+                textAlign: material.TextAlign.center,
+                style: material.TextStyle(
                   fontSize: 16,
-                  color: Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.6),
+                  color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.6),
                 ),
               ),
             ],
@@ -254,44 +261,44 @@ class _TaskListScreenState extends State<TaskListScreen> {
           .take(_currentPage * _pageSize)
           .toList();
 
-      return ListView.separated(
+      return material.ListView.separated(
         controller: _scrollController,
-        padding: const EdgeInsets.all(16),
+        padding: const material.EdgeInsets.all(16),
         itemCount: paginatedTasks.length + (_isLoadingMore ? 1 : 0),
-        separatorBuilder: (context, index) => const SizedBox(height: 8),
+        separatorBuilder: (context, index) => const material.SizedBox(height: 8),
         itemBuilder: (context, index) {
           if (index == paginatedTasks.length && _isLoadingMore) {
-            return const Center(child: CircularProgressIndicator());
+            return const material.Center(child: material.CircularProgressIndicator());
           }
 
           final task = paginatedTasks[index];
-          return Dismissible(
-            key: Key(task.id.toString()),
-            background: Container(
-              color: Colors.red,
-              alignment: Alignment.centerRight,
-              padding: const EdgeInsets.only(right: 20),
-              child: const Icon(
-                Icons.delete,
-                color: Colors.white,
+          return material.Dismissible(
+            key: material.Key(task.id.toString()),
+            background: material.Container(
+              color: material.Colors.red,
+              alignment: material.Alignment.centerRight,
+              padding: const material.EdgeInsets.only(right: 20),
+              child: const material.Icon(
+                material.Icons.delete,
+                color: material.Colors.white,
               ),
             ),
-            direction: DismissDirection.endToStart,
+            direction: material.DismissDirection.endToStart,
             confirmDismiss: (direction) async {
-              return await showDialog(
+              return await material.showDialog(
                 context: context,
-                builder: (ctx) => AlertDialog(
-                  title: const Text('Confirm Delete'),
-                  content: const Text('Are you sure you want to delete this task?'),
+                builder: (ctx) => material.AlertDialog(
+                  title: const material.Text('Confirm Delete'),
+                  content: const material.Text('Are you sure you want to delete this task?'),
                   actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(false),
-                      child: const Text('Cancel'),
+                    material.TextButton(
+                      onPressed: () => material.Navigator.of(ctx).pop(false),
+                      child: const material.Text('Cancel'),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(true),
-                      style: TextButton.styleFrom(foregroundColor: Colors.red),
-                      child: const Text('Delete'),
+                    material.TextButton(
+                      onPressed: () => material.Navigator.of(ctx).pop(true),
+                      style: material.TextButton.styleFrom(foregroundColor: material.Colors.red),
+                      child: const material.Text('Delete'),
                     ),
                   ],
                 ),
@@ -303,7 +310,7 @@ class _TaskListScreenState extends State<TaskListScreen> {
             child: TaskCard(
               task: task,
               onEdit: () {
-                showDialog(
+                material.showDialog(
                   context: context,
                   builder: (context) => TaskFormModal(task: task),
                 );
@@ -320,21 +327,21 @@ class _TaskListScreenState extends State<TaskListScreen> {
         },
       );
     }
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return material.Center(
+      child: material.Column(
+        mainAxisAlignment: material.MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.error_outline,
+          material.Icon(
+            material.Icons.error_outline,
             size: 60,
-            color: Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
+            color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
           ),
-          const SizedBox(height: 16),
-          Text(
+          const material.SizedBox(height: 16),
+          material.Text(
             'Failed to load tasks. Pull down to refresh.',
-            style: TextStyle(
+            style: material.TextStyle(
               fontSize: 16,
-              color: Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.6),
+              color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.6),
             ),
           ),
         ],
