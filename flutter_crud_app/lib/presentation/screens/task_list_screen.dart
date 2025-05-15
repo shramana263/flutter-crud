@@ -1,11 +1,12 @@
-import 'package:flutter/material.dart' as material; // Alias for Material to avoid conflict
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart' as material;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/task/task_bloc.dart';
 import '../bloc/task/task_event.dart';
 import '../bloc/task/task_state.dart';
 import '../widgets/task_card.dart';
-import '../widgets/search_bar.dart'; // Custom SearchBar
-import 'task_form_modal.dart';
+import '../widgets/search_bar.dart';
+import '../screens/task_form_screen.dart';
 import '../../models/task.dart';
 import '../../main.dart';
 
@@ -20,12 +21,12 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
   final material.ScrollController _scrollController = material.ScrollController();
   List<Task> _filteredTasks = [];
   String _searchQuery = '';
-  String? _sortBy = 'createdDate'; // Default sort by created date
-  bool _sortAscending = false; // Default to descending (latest to oldest)
+  String? _sortBy = 'createdDate';
+  bool _sortAscending = false;
   int _currentPage = 1;
   final int _pageSize = 10;
   bool _isLoadingMore = false;
-  List<Task> _allTasks = []; // Store all tasks to avoid re-fetching
+  List<Task> _allTasks = [];
 
   @override
   void initState() {
@@ -40,7 +41,6 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
         _isLoadingMore = true;
         _currentPage++;
       });
-      // No need to call GetTasks again; we already have all tasks in _allTasks
       _applyFiltersAndSort();
     }
   }
@@ -75,7 +75,7 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
       } else {
         compare = a.title.compareTo(b.title);
       }
-      return _sortAscending ? compare : -compare; // Ensures latest-to-oldest by default
+      return _sortAscending ? compare : -compare;
     });
 
     setState(() {
@@ -104,6 +104,14 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
 
   @override
   material.Widget build(material.BuildContext context) {
+    final double screenWidth = material.MediaQuery.of(context).size.width;
+    final double screenHeight = material.MediaQuery.of(context).size.height;
+    final bool isLandscape = material.MediaQuery.of(context).orientation == material.Orientation.landscape;
+    final bool isDesktop = kIsWeb && screenWidth > 600;
+    final double scaleFactor = isDesktop ? 0.4 : 1.0; // Reduce sizes by 60% on desktop
+    const double maxFontSize = 16.0; // Cap font size for desktop
+    final double maxContentWidth = isDesktop ? 800 : screenWidth;
+
     return material.Scaffold(
       appBar: material.AppBar(
         title: const material.Text('Task Manager'),
@@ -165,61 +173,67 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
           ),
         ],
       ),
-      body: BlocConsumer<TaskBloc, TaskState>(
-        listener: (context, state) {
-          if (state is TaskOperationSuccess) {
-            material.ScaffoldMessenger.of(context).showSnackBar(
-              material.SnackBar(
-                content: material.Text(state.message),
-                backgroundColor: material.Colors.green,
-                duration: const Duration(seconds: 2),
-              ),
-            );
-          } else if (state is TaskError) {
-            material.ScaffoldMessenger.of(context).showSnackBar(
-              material.SnackBar(
-                content: material.Text(state.message),
-                backgroundColor: material.Colors.red,
-                duration: const Duration(seconds: 3),
-              ),
-            );
-          }
-          if (state is TasksLoaded) {
-            setState(() {
-              _allTasks = state.tasks;
-              _applyFiltersAndSort();
-            });
-          }
-        },
-        builder: (context, state) {
-          return material.LayoutBuilder(
-            builder: (context, constraints) {
-              return material.Column(
-                children: [
-                  SearchBar(onSearch: _onSearch), // Refers to the custom SearchBar
-                  material.Expanded(
-                    child: material.RefreshIndicator(
-                      onRefresh: () async {
-                        setState(() {
-                          _currentPage = 1;
-                          _allTasks.clear();
-                        });
-                        context.read<TaskBloc>().add(GetTasks());
-                      },
-                      child: _buildTaskList(state, constraints),
-                    ),
+      body: material.Center(
+        child: material.ConstrainedBox(
+          constraints: material.BoxConstraints(maxWidth: maxContentWidth),
+          child: BlocConsumer<TaskBloc, TaskState>(
+            listener: (context, state) {
+              if (state is TaskOperationSuccess) {
+                material.ScaffoldMessenger.of(context).showSnackBar(
+                  material.SnackBar(
+                    content: material.Text(state.message),
+                    backgroundColor: material.Colors.green,
+                    duration: const Duration(seconds: 2),
                   ),
-                ],
+                );
+              } else if (state is TaskError) {
+                material.ScaffoldMessenger.of(context).showSnackBar(
+                  material.SnackBar(
+                    content: material.Text(state.message),
+                    backgroundColor: material.Colors.red,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              }
+              if (state is TasksLoaded) {
+                setState(() {
+                  _allTasks = state.tasks;
+                  _applyFiltersAndSort();
+                });
+              }
+            },
+            builder: (context, state) {
+              return material.LayoutBuilder(
+                builder: (context, constraints) {
+                  return material.Column(
+                    children: [
+                      SearchBar(onSearch: _onSearch),
+                      material.Expanded(
+                        child: material.RefreshIndicator(
+                          onRefresh: () async {
+                            setState(() {
+                              _currentPage = 1;
+                              _allTasks.clear();
+                            });
+                            context.read<TaskBloc>().add(GetTasks());
+                          },
+                          child: _buildTaskList(
+                              state, constraints, screenWidth, screenHeight, isLandscape, scaleFactor, maxFontSize),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               );
             },
-          );
-        },
+          ),
+        ),
       ),
       floatingActionButton: material.FloatingActionButton(
         onPressed: () {
-          material.showDialog(
-            context: context,
-            builder: (context) => const TaskFormModal(),
+          material.Navigator.push(
+            context,
+            material.MaterialPageRoute(builder: (context) => const TaskFormScreen()),
           );
         },
         backgroundColor: material.Theme.of(context).primaryColor,
@@ -228,7 +242,8 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
     );
   }
 
-  material.Widget _buildTaskList(TaskState state, material.BoxConstraints constraints) {
+  material.Widget _buildTaskList(TaskState state, material.BoxConstraints constraints, double screenWidth,
+      double screenHeight, bool isLandscape, double scaleFactor, double maxFontSize) {
     if (state is TaskLoading && _currentPage == 1 && _allTasks.isEmpty) {
       return const material.Center(child: material.CircularProgressIndicator());
     } else if (state is TasksLoaded || _allTasks.isNotEmpty) {
@@ -239,15 +254,15 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
             children: [
               material.Icon(
                 material.Icons.task_alt,
-                size: 60,
+                size: (screenWidth * 0.15 * scaleFactor).clamp(0, 40), // Cap icon size for desktop
                 color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
               ),
-              const material.SizedBox(height: 16),
+              material.SizedBox(height: screenHeight * 0.02 * scaleFactor),
               material.Text(
                 'No tasks yet. Add a new task by tapping the + button.',
                 textAlign: material.TextAlign.center,
                 style: material.TextStyle(
-                  fontSize: 16,
+                  fontSize: (screenWidth * 0.04 * scaleFactor).clamp(0, maxFontSize),
                   color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.6),
                 ),
               ),
@@ -256,16 +271,13 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
         );
       }
 
-      final paginatedTasks = _filteredTasks
-          .skip(0)
-          .take(_currentPage * _pageSize)
-          .toList();
+      final paginatedTasks = _filteredTasks.skip(0).take(_currentPage * _pageSize).toList();
 
       return material.ListView.separated(
         controller: _scrollController,
-        padding: const material.EdgeInsets.all(16),
+        padding: material.EdgeInsets.all((screenWidth * 0.04 * scaleFactor).clamp(0, 16)), // Cap padding
         itemCount: paginatedTasks.length + (_isLoadingMore ? 1 : 0),
-        separatorBuilder: (context, index) => const material.SizedBox(height: 8),
+        separatorBuilder: (context, index) => material.SizedBox(height: (screenHeight * 0.01 * scaleFactor).clamp(0, 8)),
         itemBuilder: (context, index) {
           if (index == paginatedTasks.length && _isLoadingMore) {
             return const material.Center(child: material.CircularProgressIndicator());
@@ -277,7 +289,7 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
             background: material.Container(
               color: material.Colors.red,
               alignment: material.Alignment.centerRight,
-              padding: const material.EdgeInsets.only(right: 20),
+              padding: material.EdgeInsets.only(right: (screenWidth * 0.05 * scaleFactor).clamp(0, 20)),
               child: const material.Icon(
                 material.Icons.delete,
                 color: material.Colors.white,
@@ -310,9 +322,9 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
             child: TaskCard(
               task: task,
               onEdit: () {
-                material.showDialog(
-                  context: context,
-                  builder: (context) => TaskFormModal(task: task),
+                material.Navigator.push(
+                  context,
+                  material.MaterialPageRoute(builder: (context) => TaskFormScreen(task: task)),
                 );
               },
               onDelete: () {
@@ -333,14 +345,14 @@ class _TaskListScreenState extends material.State<TaskListScreen> {
         children: [
           material.Icon(
             material.Icons.error_outline,
-            size: 60,
+            size: (screenWidth * 0.15 * scaleFactor).clamp(0, 40),
             color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
           ),
-          const material.SizedBox(height: 16),
+          material.SizedBox(height: screenHeight * 0.02 * scaleFactor),
           material.Text(
             'Failed to load tasks. Pull down to refresh.',
             style: material.TextStyle(
-              fontSize: 16,
+              fontSize: (screenWidth * 0.04 * scaleFactor).clamp(0, maxFontSize),
               color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.6),
             ),
           ),
