@@ -26,24 +26,32 @@ class DatabaseHelper {
       return task.id!;
     } else {
       final newId = DateTime.now().millisecondsSinceEpoch % 0xFFFFFFFF;
-      final taskWithId = Task(
-        id: newId,
-        title: task.title,
-        description: task.description,
-        isCompleted: task.isCompleted,
-        createdDate: task.createdDate,
-        priority: task.priority,
-      );
+      final taskWithId = task.copyWith(id: newId);
       await box.put(newId, taskWithId);
       _logger.i('Inserted new task with ID: $newId, Title: ${task.title}');
       return newId;
     }
   }
 
+  Future<void> batchInsertTasks(List<Task> tasks) async {
+    var box = await this.box;
+    final tasksWithIds = tasks.map((task) {
+      if (task.id != null) {
+        return task;
+      } else {
+        final newId = DateTime.now().millisecondsSinceEpoch % 0xFFFFFFFF;
+        return task.copyWith(id: newId);
+      }
+    }).toList();
+
+    final map = {for (var task in tasksWithIds) task.id!: task};
+    await box.putAll(map);
+    _logger.i('Batch inserted ${tasks.length} tasks');
+  }
+
   Future<List<Task>> getTasks() async {
     var box = await this.box;
     final tasks = box.values.toList();
-    // Sort tasks by createdDate in descending order
     tasks.sort((a, b) => b.createdDate.compareTo(a.createdDate));
     _logger.i('Retrieved ${tasks.length} tasks from Hive');
     return tasks;
@@ -79,7 +87,7 @@ class DatabaseHelper {
 
     _logger.i('===== TASKS IN DATABASE =====');
     for (int i = 0; i < box.length; i++) {
-      _logger.i('Key: ${keys[i]}, ID: ${tasks[i].id}, Title: ${tasks[i].title}');
+      _logger.i('Key: ${keys[i]}, ID: ${tasks[i].id}, ServerID: ${tasks[i].serverId}, Title: ${tasks[i].title}');
     }
     _logger.i('============================');
   }

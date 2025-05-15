@@ -1,62 +1,43 @@
-// lib/models/task.dart
 import 'package:hive/hive.dart';
-
 part 'task.g.dart';
 
 @HiveType(typeId: 0)
 class Task extends HiveObject {
   @HiveField(0)
-  final int? id;
+  int? id;
 
   @HiveField(1)
-  final String title;
+  String title;
 
   @HiveField(2)
-  final String description;
+  String description;
 
   @HiveField(3)
-  final bool isCompleted;
+  bool isCompleted;
 
   @HiveField(4)
-  final DateTime createdDate;
+  DateTime createdDate;
 
   @HiveField(5)
-  final int priority;
+  int priority;
+
+  @HiveField(6)
+  int? serverId; // Store the API-assigned ID
+
+  @HiveField(7)
+  DateTime? lastSynced; // Track when this task was last synced
 
   Task({
     this.id,
     required this.title,
     required this.description,
-    this.isCompleted = false,
+    required this.isCompleted,
     required this.createdDate,
-    this.priority = 1,
+    required this.priority,
+    this.serverId,
+    this.lastSynced,
   });
 
-  // Convert Task object to a map for database operations
-  Map<String, dynamic> toMap() {
-    return {
-      'id': id,
-      'title': title,
-      'description': description,
-      'isCompleted': isCompleted ? 1 : 0,
-      'createdDate': createdDate.toIso8601String(),
-      'priority': priority,
-    };
-  }
-
-  // Create a Task object from a map
-  factory Task.fromMap(Map<String, dynamic> map) {
-    return Task(
-      id: map['id'],
-      title: map['title'],
-      description: map['description'],
-      isCompleted: map['isCompleted'] == 1,
-      createdDate: DateTime.parse(map['createdDate']),
-      priority: map['priority'],
-    );
-  }
-
-  // Create a copy of the task with updated fields
   Task copyWith({
     int? id,
     String? title,
@@ -64,6 +45,8 @@ class Task extends HiveObject {
     bool? isCompleted,
     DateTime? createdDate,
     int? priority,
+    int? serverId,
+    DateTime? lastSynced,
   }) {
     return Task(
       id: id ?? this.id,
@@ -72,27 +55,34 @@ class Task extends HiveObject {
       isCompleted: isCompleted ?? this.isCompleted,
       createdDate: createdDate ?? this.createdDate,
       priority: priority ?? this.priority,
+      serverId: serverId ?? this.serverId,
+      lastSynced: lastSynced ?? this.lastSynced,
     );
   }
 
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is Task &&
-          runtimeType == other.runtimeType &&
-          id == other.id &&
-          title == other.title &&
-          description == other.description &&
-          isCompleted == other.isCompleted &&
-          createdDate == other.createdDate &&
-          priority == other.priority;
+  Map<String, dynamic> toJson() {
+    return {
+      'id': serverId ?? id,
+      'title': title,
+      'description': description,
+      'completed': isCompleted,
+      'createdDate': createdDate.toIso8601String(),
+      'priority': priority,
+    };
+  }
 
-  @override
-  int get hashCode =>
-      id.hashCode ^
-      title.hashCode ^
-      description.hashCode ^
-      isCompleted.hashCode ^
-      createdDate.hashCode ^
-      priority.hashCode;
+  factory Task.fromJson(Map<String, dynamic> json) {
+    return Task(
+      id: json['localId'] as int? ?? DateTime.now().millisecondsSinceEpoch % 0xFFFFFFFF,
+      serverId: json['id'] as int?,
+      title: json['title'] as String? ?? '',
+      description: json['description'] as String? ?? '',
+      isCompleted: json['completed'] as bool? ?? false,
+      createdDate: json['createdDate'] != null
+          ? DateTime.parse(json['createdDate'] as String)
+          : DateTime.now(),
+      priority: json['priority'] as int? ?? 1,
+      lastSynced: DateTime.now(),
+    );
+  }
 }
