@@ -23,7 +23,6 @@ class TaskCard extends material.StatelessWidget {
       shape: material.RoundedRectangleBorder(
         borderRadius: material.BorderRadius.circular(12),
       ),
-      color: material.Theme.of(context).cardColor, // Use theme-aware card color
       child: material.Padding(
         padding: const material.EdgeInsets.all(16),
         child: material.Column(
@@ -60,7 +59,7 @@ class TaskCard extends material.StatelessWidget {
               task.description,
               style: material.TextStyle(
                 fontSize: 14,
-                color: material.Theme.of(context).textTheme.bodyMedium!.color,
+                color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.7),
               ),
             ),
             const material.SizedBox(height: 8),
@@ -69,7 +68,7 @@ class TaskCard extends material.StatelessWidget {
               'Created: ${DateFormat('MMM d, yyyy h:mm a').format(task.createdDate)}',
               style: material.TextStyle(
                 fontSize: 12,
-                color: material.Theme.of(context).textTheme.bodyMedium!.color!.withOpacity(0.7),
+                color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.5),
                 fontStyle: material.FontStyle.italic,
               ),
             ),
@@ -97,7 +96,7 @@ class TaskCard extends material.StatelessWidget {
                               : 'High',
                       style: material.TextStyle(
                         fontSize: 12,
-                        color: material.Theme.of(context).textTheme.bodyMedium!.color,
+                        color: material.Theme.of(context).textTheme.bodyLarge!.color!.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -106,7 +105,7 @@ class TaskCard extends material.StatelessWidget {
                   children: [
                     material.IconButton(
                       icon: const material.Icon(material.Icons.edit, size: 20),
-                      color: material.Theme.of(context).textTheme.bodyMedium!.color, // Theme-aware color
+                      color: material.Colors.grey,
                       onPressed: onEdit,
                       tooltip: 'Edit Task',
                     ),
